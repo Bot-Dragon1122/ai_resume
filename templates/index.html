@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <!-- Load Tailwind CSS from the correct CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Load Inter font for better typography */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f7f9;
+        }
+
+        /* Custom scrollbar for analysis result */
+        #analysis-result::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #analysis-result::-webkit-scrollbar-thumb {
+            background-color: #a8a29e;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen p-4 sm:p-8 flex items-center justify-center">
+
+    <div class="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+        <!-- Input Panel -->
+        <div class="bg-white p-6 sm:p-8 rounded-xl shadow-2xl h-full flex flex-col">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-indigo-600 mr-2" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                    <path d="M2 17l10 5 10-5M2 12l10 5 10-5" />
+                </svg>
+                Gemini Resume Analyzer
+            </h1>
+            <p class="text-gray-500 mb-6">Boost your ATS score by comparing your resume with a job description.</p>
+
+            <form id="analysis-form" class="space-y-6 flex-grow flex flex-col">
+                <div>
+                    <label for="resume-upload" class="block text-lg font-semibold text-gray-700 mb-2">1. Upload Resume
+                        (PDF Only)</label>
+                    <input type="file" id="resume-upload" name="resume" accept=".pdf" required class="block w-full text-sm text-gray-500
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-lg file:border-0
+                        file:text-sm file:font-semibold
+                        file:bg-indigo-50 file:text-indigo-700
+                        hover:file:bg-indigo-100 transition duration-150 ease-in-out cursor-pointer">
+                </div>
+
+                <div class="flex-grow flex flex-col">
+                    <label for="job-description" class="block text-lg font-semibold text-gray-700 mb-2">2. Paste Job
+                        Description</label>
+                    <textarea id="job-description" name="job_description" rows="10" required
+                        placeholder="Paste the full text of the job description here..."
+                        class="w-full p-4 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 flex-grow resize-none transition duration-150 ease-in-out"></textarea>
+                </div>
+
+                <button type="submit" id="analyze-button"
+                    class="w-full px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-500 focus:ring-opacity-50 transition duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
+                    <svg id="button-icon" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                        stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M9 19V6l-2 2m8 11V6l2 2m-8 6h8m-8 4h8m-8-8h8" />
+                    </svg>
+                    <span id="button-text">Analyze Resume</span>
+                </button>
+
+                <div id="status-message" class="text-center text-sm font-medium h-4"></div>
+            </form>
+        </div>
+
+        <!-- Output Panel -->
+        <div class="bg-white p-6 sm:p-8 rounded-xl shadow-2xl flex flex-col">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-green-600 mr-2" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
+                    <path d="M13 2v8h7" />
+                    <path d="M10 12h4m-4 4h4m-4 4h4" />
+                </svg>
+                Analysis Result
+            </h2>
+
+            <div id="analysis-result"
+                class="bg-gray-50 p-4 border border-gray-200 rounded-lg overflow-y-auto h-[70vh] flex-grow text-gray-700">
+                <p class="text-gray-400 italic">Your AI-powered resume analysis will appear here after submission. This
+                    will include an ATS match score, missing skills, and personalized improvement suggestions.</p>
+            </div>
+
+            <div id="error-box" class="hidden mt-4 p-3 bg-red-100 text-red-700 border border-red-300 rounded-lg"></div>
+        </div>
+    </div>
+
+    <!-- JavaScript for Form Submission and Markdown Rendering -->
+    <script type="text/javascript">
+        // Basic Markdown parser for displaying the Gemini response neatly
+        function renderMarkdown(markdownText) {
+            // Simple conversions for common Markdown elements (H2/H3, lists, bold)
+            let html = markdownText
+                .replace(/^### (.*$)/gim, '<h3 class="text-xl font-bold mt-4 mb-2">$1</h3>') // H3
+                .replace(/^## (.*$)/gim, '<h2 class="text-2xl font-bold mt-6 mb-3 text-indigo-700">$1</h2>') // H2
+                .replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>') // Bold
+                .replace(/^\* (.*$)/gim, '<li class="ml-4 list-disc">$1</li>') // Bullet points
+                .replace(/^(?!\s*\<h|\<li)(.*)$/gim, '<p class="mb-3">$1</p>'); // Paragraphs (must be last)
+
+            // Wrap list items in ul tags
+            const listStart = '<ul>';
+            const listEnd = '</ul>';
+            let finalHtml = '';
+            let inList = false;
+
+            html.split('\n').forEach(line => {
+                if (line.startsWith('<li')) {
+                    if (!inList) {
+                        finalHtml += listStart;
+                        inList = true;
+                    }
+                } else if (inList) {
+                    finalHtml += listEnd;
+                    inList = false;
+                }
+                finalHtml += line + '\n';
+            });
+
+            if (inList) {
+                finalHtml += listEnd;
+            }
+
+            return finalHtml.trim();
+        }
+
+        document.getElementById('analysis-form').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const button = document.getElementById('analyze-button');
+            const buttonText = document.getElementById('button-text');
+            const buttonIcon = document.getElementById('button-icon');
+            const statusMessage = document.getElementById('status-message');
+            const resultDiv = document.getElementById('analysis-result');
+            const errorBox = document.getElementById('error-box');
+
+            // Reset UI
+            resultDiv.innerHTML = '<p class="text-gray-400 italic">Analysis in progress...</p>';
+            errorBox.classList.add('hidden');
+            errorBox.textContent = '';
+            statusMessage.textContent = 'Processing request...';
+
+            // Set Loading State
+            button.disabled = true;
+            buttonText.textContent = 'Analyzing...';
+            // Use SVG class manipulation for a spinning effect
+            buttonIcon.classList.add('animate-spin', 'opacity-75');
+
+            // Gather form data
+            const formData = new FormData(this);
+
+            try {
+                // The fetch call goes to the Flask backend's '/analyze' endpoint
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    // Success: render the markdown analysis
+                    const analysisHtml = renderMarkdown(data.analysis);
+                    resultDiv.innerHTML = analysisHtml;
+                    statusMessage.textContent = 'Analysis complete!';
+                } else {
+                    // API or server error
+                    const errorMessage = data.error || 'An unknown error occurred during analysis.';
+                    errorBox.textContent = 'Error: ' + errorMessage;
+                    errorBox.classList.remove('hidden');
+                    resultDiv.innerHTML = '<p class="text-red-500">Failed to generate analysis. See error box above.</p>';
+                    statusMessage.textContent = 'Analysis failed.';
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+                errorBox.textContent = 'Network error or unable to reach the server. Check console for details.';
+                errorBox.classList.remove('hidden');
+                resultDiv.innerHTML = '<p class="text-red-500">Failed to connect to the analysis service.</p>';
+                statusMessage.textContent = 'Connection error.';
+            } finally {
+                // Reset Loading State
+                button.disabled = false;
+                buttonText.textContent = 'Analyze Resume';
+                buttonIcon.classList.remove('animate-spin', 'opacity-75');
+            }
+        });
+    </script>
+</body>
+
+</html>
