@@ -13,7 +13,8 @@ from pypdf import PdfReader # Used for PDF text extraction
 # Ensure you install the required libraries: pip install Flask google-genai pypdf
 
 # Use os.getenv for standard environment variable access
-GEMINI_API_KEY = "AIzaSyAtjk0FV6B3yfKf6VhG2ePSB1iDVLQPDhI"
+#GEMINI_API_KEY = "AIzaSyAtjk0FV6B3yfKf6VhG2ePSB1iDVLQPDhI"
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") 
 MODEL_NAME = "gemini-2.0-flash" # The requested Flash model
 
 app = Flask(__name__)
@@ -168,4 +169,5 @@ if __name__ == '__main__':
     # 4. Run the application:
     #    python app.py
     # 5. Access http://127.0.0.1:5000/ in your browser.
+
     app.run(debug=True)
